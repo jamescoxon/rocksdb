@@ -150,54 +150,10 @@ Status TransactionUtil::CheckKey(DBImpl* db_impl, SuperVersion* sv,
   return result;
 }
 
-Status TransactionUtil::CheckKeysForConflicts(DBImpl* db_impl,
-                                              const LockTracker& tracker,
-                                              bool cache_only) {
+Status TransactionUtil::CheckKeysForConflicts(DBImpl* /*db_impl*/,
+                                              const LockTracker& /*tracker*/,
+                                              bool /*cache_only*/) {
   Status result;
-
-  std::unique_ptr<LockTracker::ColumnFamilyIterator> cf_it(
-      tracker.GetColumnFamilyIterator());
-  assert(cf_it != nullptr);
-  while (cf_it->HasNext()) {
-    ColumnFamilyId cf = cf_it->Next();
-
-    SuperVersion* sv = db_impl->GetAndRefSuperVersion(cf);
-    if (sv == nullptr) {
-      result = Status::InvalidArgument("Could not access column family " +
-                                       ToString(cf));
-      break;
-    }
-
-    SequenceNumber earliest_seq =
-        db_impl->GetEarliestMemTableSequenceNumber(sv, true);
-
-    // For each of the keys in this transaction, check to see if someone has
-    // written to this key since the start of the transaction.
-    std::unique_ptr<LockTracker::KeyIterator> key_it(
-        tracker.GetKeyIterator(cf));
-    assert(key_it != nullptr);
-    while (key_it->HasNext()) {
-      const std::string& key = key_it->Next();
-      PointLockStatus status = tracker.GetPointLockStatus(cf, key);
-      const SequenceNumber key_seq = status.seq;
-
-      // TODO: support timestamp-based conflict checking.
-      // CheckKeysForConflicts() is currently used only by optimistic
-      // transactions.
-      result = CheckKey(db_impl, sv, earliest_seq, key_seq, key,
-                        /*read_ts=*/nullptr, cache_only);
-      if (!result.ok()) {
-        break;
-      }
-    }
-
-    db_impl->ReturnAndCleanupSuperVersion(cf, sv);
-
-    if (!result.ok()) {
-      break;
-    }
-  }
-
   return result;
 }
 
